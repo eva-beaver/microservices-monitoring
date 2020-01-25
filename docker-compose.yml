@@ -1,0 +1,56 @@
+version: "3.7"
+
+
+networks:
+ local-net:
+  name: local-net
+  driver: bridge
+  ipam:
+    config:
+      - subnet: 172.1.1.0/24
+
+services:
+
+  micrometerprometheus:
+    image: micrometerprometheus/docker
+    container_name: micrometerprometheus
+    build:
+      context: sample-app-micrometer-prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "localhost:8080/actuator/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 60s
+    ports:
+      - "8080:8080"
+    networks:
+      - local-net
+
+  prometheus:
+    image: prometheus/docker
+    container_name: prometheus
+    build:
+      context: prometheus
+    volumes:
+     - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command: "--config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus"
+    ports:
+     - 9090:9090
+    depends_on:
+     - micrometerprometheus
+    networks:
+      - local-net
+
+  grafana:
+    image: grafana/docker
+    container_name: grafana
+    build:
+      context: grafana
+    ports:
+     - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - local-net
+

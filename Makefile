@@ -89,19 +89,24 @@ run-prometheus:
  prom/prometheus ; \
 	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image prometheus started."; \
 	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+.SILENT: run-prometheus
+.PHONY: run-prometheus
 
 rm-prometheus:	stop-prometheus
 	echo "🐋 	: " $(shell date --iso=seconds) " : removing docker image prometheus"; \
 	docker rm prometheus; \
 	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image removed."; \
 	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+.SILENT: rm-prometheus
+.PHONY: rm-prometheus
 
 stop-prometheus:
 	echo "🐋 	: " $(shell date --iso=seconds) " : stopping docker image prometheus"; \
 	docker stop prometheus; \
 	echo " 	: " $(shell date --iso=seconds) " : docker image stopped."; \
 	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image stopped."; \
-
+.SILENT: stop-prometheus
+.PHONY: stop-prometheus
 
 run-grafana:
 	echo "🐋 	: " $(shell date --iso=seconds) " : starting docker image grafana"; \
@@ -132,4 +137,25 @@ prune:
 	echo "✔️ 	: " $(shell date --iso=seconds) " : docker images pruned."; \
 	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
 
+run-env-compose:
+	echo "🐋 	: " $(shell date --iso=seconds) " : starting docker environment"; \
+	docker-compose up -d --build
+	echo "✔️ 	: " $(shell date --iso=seconds) " : docker environment loaded."; \
+	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+
+update-dashboards:
+	echo "⏲️ 	: " $(shell date --iso=seconds) " : extracting graphana dashboards..."; \
+	./update-dashboards.sh
+	echo "✔️ 	: " $(shell date --iso=seconds) " : dashboards extracted."; \
+	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+
+show-dashboards:
+	echo "⏲️ 	: " $(shell date --iso=seconds) " : graphana dashboards..."; \
+	curl --user admin:admin http://localhost:3000/api/search
+	echo "✔️ 	: " $(shell date --iso=seconds) " : all dashboards found."; \
+	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+
+
+.SILENT: run-env-compose update-dashboards show-dashboards
+.PHONY:  run-env-compose update-dashboards show-dashboards
 

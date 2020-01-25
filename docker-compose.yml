@@ -47,6 +47,8 @@ services:
     container_name: grafana
     build:
       context: grafana
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
     ports:
      - "3000:3000"
     depends_on:

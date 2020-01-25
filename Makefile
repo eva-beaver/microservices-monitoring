@@ -137,6 +137,8 @@ prune:
 	echo "✔️ 	: " $(shell date --iso=seconds) " : docker images pruned."; \
 	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
 
+# Running everything via docker-compose
+
 run-env-compose:
 	echo "🐋 	: " $(shell date --iso=seconds) " : starting docker environment"; \
 	docker-compose up -d --build
@@ -155,7 +157,9 @@ show-dashboards:
 	echo "✔️ 	: " $(shell date --iso=seconds) " : all dashboards found."; \
 	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
 
+bash-grafana:
+	docker exec -it grafana bash;
 
-.SILENT: run-env-compose update-dashboards show-dashboards
-.PHONY:  run-env-compose update-dashboards show-dashboards
+.SILENT: run-env-compose update-dashboards show-dashboards bash-grafana
+.PHONY:  run-env-compose update-dashboards show-dashboards bash-grafana
 

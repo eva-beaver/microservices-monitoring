@@ -77,6 +77,60 @@ curl-micro-health:
 .SILENT: build-micro run-micro-java run-micro-app start-micro-app stop-micro-app rm-micro-app bash-micro-app
 .PHONY: build-micro run-micro-java run-micro-app start-micro-app stop-micro-app rm-micro-app bash-micro-app
 
+build-client:
+	echo "⏲️ 	: " $(shell date --iso=seconds) " : started build script..."; \
+	cd spring-boot-admin; \
+	cd client; \
+	mvn clean package; \
+	echo "✔️ 	: " $(shell date --iso=seconds) " : build complete."; \
+	echo "🐋 	: " $(shell date --iso=seconds) " : building docker image spring-boot-admin-client"; \
+	docker build --force-rm -t springadminclientservice . ; \
+	cd ..\..; \
+	echo "✔️ 	: " $(shell date --iso=seconds) " : spring-boot-admin-client docker image complete."; \
+	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+
+run-client-java:
+	java -jar -Dserver.port=9040 -Dmanagement.port=9041 spring-boot-admin/client/target/spring-boot-admin-client-1.0.0.jar; 
+
+run-client-app: stop-client-app rm-client-app start-client-app
+
+start-client-app: 
+	echo "🐋 	: " $(shell date --iso=seconds) " : starting docker image springadminclientservice"; \
+	docker run \
+ --name=springadminclient \
+ --health-cmd="curl --silent --fail 171.18.0.4:9040/actuator/health || exit 1" \
+ --health-interval=5s \
+ --health-retries=12 \
+ --health-timeout=2s \
+ --health-start-period=60s \
+ --net admin-network \
+ --ip 171.18.0.4 \
+ -e "SPRING_PROFILES_ACTIVE=local" \
+ -e "SPRING_APPLICATION_NAME=spring-boot-admin-client" \
+ -e "SPRING_BOOT_ADMIN_CLIENT_URL=http://171.18.0.2:9020" \
+ -p 9040:9040 \
+ -d \
+ springadminclientservice:latest; \
+	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image springadminclientservice started."; \
+	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+
+stop-client-app:
+	echo "🐋 	: " $(shell date --iso=seconds) " : stopping docker image springadminclientservice"; \
+	docker stop springadminclient; \
+	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image stopped."; \
+
+rm-client-app:	stop-client-app
+	echo "🐋 	: " $(shell date --iso=seconds) " : removing docker image springadminserverservice"; \
+	docker rm springadminclient; \
+	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image removed."; \
+	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+
+bash-client-app:
+	docker exec -it springadminserver bash;
+
+.SILENT: build-client run-client-java run-client-app start-client-app stop-client-app rm-client-app bash-client-app
+.PHONY: build-client run-client-java run-client-app start-client-app stop-client-app rm-client-app bash-client-app
+
 build-admin:
 	echo "⏲️ 	: " $(shell date --iso=seconds) " : started build script..."; \
 	cd spring-boot-admin; \
@@ -90,7 +144,7 @@ build-admin:
 	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
 
 run-admin-java:
-	java -jar -Dserver.port=9020 -Dmanagement.port=9021 spring-admin-server/target/spring-admin-server-0.0.1-SNAPSHOT.jar; 
+	java -jar -Dserver.port=9020 -Dmanagement.port=9021 spring-boot-admin/server/target/spring-boot-admin-server-1.0.0.jar; 
 
 run-admin-app: stop-admin-app rm-admin-app start-admin-app
 
@@ -106,7 +160,7 @@ start-admin-app:
  --net admin-network \
  --ip 171.18.0.2 \
  -e "SPRING_PROFILES_ACTIVE=local" \
- -e "SPRING_APPLICATION_NAME=spring-boot-admin-server-x" \
+ -e "SPRING_APPLICATION_NAME=spring-boot-admin-server" \
  -e "SPRING_BOOT_ADMIN_CLIENT_URL=http://171.18.0.2:9020" \
  -p 9020:9020 \
  -d \

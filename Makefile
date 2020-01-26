@@ -11,30 +11,30 @@ help:
 	echo "Use make [rule]"
 	echo "Rules:"
 	echo ""
-	echo "build 		- build application and generate docker image"
-	echo "run-app		- run application on docker"
-	echo "stop-app		- stop application"
-	echo "rm-app		- stop and delete application"
+	echo "build-micro	- build application and generate docker image"
+	echo "run-micro-app	- run application on docker"
+	echo "stop-micro-app	- stop application"
+	echo "rm-micro-app	- stop and delete application"
 	echo ""
 	echo "help		- show this message"
 
-build:
+build-micro:
 	echo "⏲️ 	: " $(shell date --iso=seconds) " : started build script..."; \
 	cd sample-app-micrometer-prometheus; \
 	mvn clean package; \
 	echo "✔️ 	: " $(shell date --iso=seconds) " : build complete."; \
-	cd ..; \
 	echo "🐋 	: " $(shell date --iso=seconds) " : building docker image micrometerprometheusservice"; \
 	docker build --force-rm -t micrometerprometheusservice . ; \
+	cd ..; \
 	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image complete."; \
 	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
 
-run-app-java:
+run-micro-java:
 	java -jar sample-app-micrometer-prometheus/target/micrometer-prometheus-0.0.1-SNAPSHOT.jar; 
 
-run-app: stop-app rm-app start-app
+run-micro-app: stop-micro-app rm-micro-app start-micro-app
 
-start-app: 
+start-micro-app: 
 	echo "🐋 	: " $(shell date --iso=seconds) " : starting docker image micrometerprometheusservice"; \
 	docker run \
  --name=micrometerprometheus \
@@ -43,41 +43,102 @@ start-app:
  --health-retries=12 \
  --health-timeout=2s \
  --health-start-period=60s \
+ --net=admin-network \
  -p 8080:8080 \
  -d \
  micrometerprometheusservice:latest; \
 	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image micrometerprometheusservice started."; \
 	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
 
-stop-app:
+stop-micro-app:
 	echo "🐋 	: " $(shell date --iso=seconds) " : stopping docker image micrometerprometheusservice"; \
 	docker stop micrometerprometheus; \
 	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image stopped."; \
 
-rm-app:	stop-app
+rm-micro-app:	stop-micro-app
 	echo "🐋 	: " $(shell date --iso=seconds) " : removing docker image micrometerprometheusservice"; \
 	docker rm micrometerprometheus; \
 	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image removed."; \
 	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
 
-bash-app:
+bash-micro-app:
 	docker exec -it micrometerprometheus bash;
 
-show-logs:
+show-micro-logs:
 	echo "🐋 	: " $(shell date --iso=seconds) " : docker image logs for micrometerprometheusservice"; \
 	docker logs -f micrometerprometheus;
 
-curl-act:
+curl-micro-act:
 	curl localhost:8080/actuator
 
-curl-health:
+curl-micro-health:
 	curl localhost:8080/actuator/health
+
+.SILENT: build-micro run-micro-java run-micro-app start-micro-app stop-micro-app rm-micro-app bash-micro-app
+.PHONY: build-micro run-micro-java run-micro-app start-micro-app stop-micro-app rm-micro-app bash-micro-app
+
+build-admin:
+	echo "⏲️ 	: " $(shell date --iso=seconds) " : started build script..."; \
+	cd spring-boot-admin; \
+	cd server; \
+	mvn clean package; \
+	echo "✔️ 	: " $(shell date --iso=seconds) " : build complete."; \
+	echo "🐋 	: " $(shell date --iso=seconds) " : building docker image spring-boot-admin-server"; \
+	docker build --force-rm -t springadminserverservice . ; \
+	cd ..\..; \
+	echo "✔️ 	: " $(shell date --iso=seconds) " : spring-boot-admin-server docker image complete."; \
+	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+
+run-admin-java:
+	java -jar -Dserver.port=9020 -Dmanagement.port=9021 spring-admin-server/target/spring-admin-server-0.0.1-SNAPSHOT.jar; 
+
+run-admin-app: stop-admin-app rm-admin-app start-admin-app
+
+start-admin-app: 
+	echo "🐋 	: " $(shell date --iso=seconds) " : starting docker image springadminserverservice"; \
+	docker run \
+ --name=springadminserver \
+ --health-cmd="curl --silent --fail 171.18.0.2:9020/actuator/health || exit 1" \
+ --health-interval=5s \
+ --health-retries=12 \
+ --health-timeout=2s \
+ --health-start-period=60s \
+ --net admin-network \
+ --ip 171.18.0.2 \
+ -e "SPRING_PROFILES_ACTIVE=local" \
+ -e "SPRING_APPLICATION_NAME=spring-boot-admin-server-x" \
+ -e "SPRING_BOOT_ADMIN_CLIENT_URL=http://171.18.0.2:9020" \
+ -p 9020:9020 \
+ -d \
+ springadminserverservice:latest; \
+	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image springadminserverservice started."; \
+	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+
+stop-admin-app:
+	echo "🐋 	: " $(shell date --iso=seconds) " : stopping docker image springadminserverservice"; \
+	docker stop springadminserver; \
+	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image stopped."; \
+
+rm-admin-app:	stop-admin-app
+	echo "🐋 	: " $(shell date --iso=seconds) " : removing docker image springadminserverservice"; \
+	docker rm springadminserver; \
+	echo "✔️ 	: " $(shell date --iso=seconds) " : docker image removed."; \
+	echo "👋 	: " $(shell date --iso=seconds) " : exiting..."; \
+
+bash-admin-app:
+	docker exec -it springadminserver bash;
+
+.SILENT: build-admin run-admin-java run-admin-app start-admin-app stop-admin-app rm-admin-app bash-admin-app
+.PHONY: build-admin run-admin-java run-admin-app start-admin-app stop-admin-app rm-admin-app bash-admin-app
 
 start-env: run-app run-prometheus run-grafana
 
 stop-env: stop-app stop-prometheus stop-grafana
 
 rm-env: rm-app stop-app rm-prometheus stop-prometheus rm-grafana stop-grafana
+
+.SILENT: start-env stop-env rm-env
+.PHONY: start-env stop-env rm-env
 
 run-prometheus:
 	echo "🐋 	: " $(shell date --iso=seconds) " : starting docker image prometheus"; \
@@ -162,4 +223,13 @@ bash-grafana:
 
 .SILENT: run-env-compose update-dashboards show-dashboards bash-grafana
 .PHONY:  run-env-compose update-dashboards show-dashboards bash-grafana
+
+start-admin-network:
+	docker network create --subnet=171.18.0.0/16 admin-network;
+
+rm-admin-network:
+	docker network rm admin-network;
+
+.SILENT: start-admin-network rm-admin-network
+.PHONY:  start-admin-network rm-admin-network
 
